@@ -31,6 +31,7 @@ import net.srcz.android.screencast.api.injector.KeyCodeConverter;
 import net.srcz.android.screencast.api.injector.ScreenCaptureThread.ScreenCaptureListener;
 import net.srcz.android.screencast.ui.explorer.JFrameExplorer;
 
+import com.android.chimpchat.core.PhysicalButton;
 import com.android.ddmlib.IDevice;
 
 public class JFrameMain extends JFrame {
@@ -47,14 +48,12 @@ public class JFrameMain extends JFrame {
 	private JButton jbKbMenu = new JButton("Menu");
 	private JButton jbKbBack = new JButton("Back");
 	private JButton jbKbSearch = new JButton("Search");
-	private JButton jbKbPhoneOn = new JButton("Call");
-	private JButton jbKbPhoneOff = new JButton("End call");
 
 	public class KbActionListener implements ActionListener {
 
-		int key;
+		String key;
 
-		public KbActionListener(int key) {
+		public KbActionListener(String key) {
 			this.key = key;
 		}
 
@@ -100,12 +99,12 @@ public class JFrameMain extends JFrame {
 						if (injector == null)
 							return false;
 						if (e.getID() == KeyEvent.KEY_PRESSED) {
-							int code = KeyCodeConverter.getKeyCode(e);
+							String code = KeyCodeConverter.getKeyCode(e);
 							injector.injectKeycode(ConstEvtKey.ACTION_DOWN,
 									code);
 						}
 						if (e.getID() == KeyEvent.KEY_RELEASED) {
-							int code = KeyCodeConverter.getKeyCode(e);
+							String code = KeyCodeConverter.getKeyCode(e);
 							injector.injectKeycode(ConstEvtKey.ACTION_UP, code);
 						}
 						return false;
@@ -122,28 +121,21 @@ public class JFrameMain extends JFrame {
 		jbKbMenu.setFocusable(false);
 		jbKbBack.setFocusable(false);
 		jbKbSearch.setFocusable(false);
-		jbKbPhoneOn.setFocusable(false);
-		jbKbPhoneOff.setFocusable(false);
 
 		jbKbHome.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_HOME));
+				PhysicalButton.HOME.getKeyName()));
 		jbKbMenu.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_MENU));
+				PhysicalButton.MENU.getKeyName()));
 		jbKbBack.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_BACK));
+				PhysicalButton.BACK.getKeyName()));
 		jbKbSearch.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_SEARCH));
-		jbKbPhoneOn.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_CALL));
-		jbKbPhoneOff.addActionListener(new KbActionListener(
-				ConstEvtKey.KEYCODE_ENDCALL));
+				PhysicalButton.SEARCH.getKeyName()));
+		
 
 		jtbHardkeys.add(jbKbHome);
 		jtbHardkeys.add(jbKbMenu);
 		jtbHardkeys.add(jbKbBack);
 		jtbHardkeys.add(jbKbSearch);
-		jtbHardkeys.add(jbKbPhoneOn);
-		jtbHardkeys.add(jbKbPhoneOff);
 
 		setIconImage(Toolkit.getDefaultToolkit().getImage(
 				getClass().getResource("icon.png")));

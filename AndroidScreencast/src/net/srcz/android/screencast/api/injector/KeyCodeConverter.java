@@ -2,90 +2,79 @@ package net.srcz.android.screencast.api.injector;
 
 import java.awt.event.KeyEvent;
 
+import com.android.chimpchat.core.PhysicalButton;
+
 public class KeyCodeConverter {
 
-	public static int getKeyCode(KeyEvent e) {
+	public static String getKeyCode(KeyEvent e) {
 		char c = e.getKeyChar();
-		int code = 0;
+
+		String code = null;
+		
 		if(Character.isLetter(c))
-			code = ConstEvtKey.KEYCODE_A + (Character.toLowerCase(c)-'a');
+			code = Character.toLowerCase(c) + "";
 		if(Character.isDigit(c))
-			code = ConstEvtKey.KEYCODE_0 + (c-'0');
+			code = c + "";
 		
 		if(c == '\n')
-			code = ConstEvtKey.KEYCODE_ENTER;
+			code = PhysicalButton.ENTER.getKeyName();
 
 		if(c == ' ')
-			code = ConstEvtKey.KEYCODE_SPACE; 
-
-		if(c == '\b')
-			code = ConstEvtKey.KEYCODE_DEL; 
-
-		if(c == '\t')
-			code = ConstEvtKey.KEYCODE_TAB; 
-
+			code = " "; 
+ 
 		if(c == '/')
-			code = ConstEvtKey.KEYCODE_SLASH; 
+			code = "/"; 
 
 		if(c == '\\')
-			code = ConstEvtKey.KEYCODE_BACKSLASH; 
+			code = "\\"; 
 
 		if(c == ',')
-			code = ConstEvtKey.KEYCODE_COMMA; 
+			code = ","; 
 
 		if(c == ';')
-			code = ConstEvtKey.KEYCODE_SEMICOLON; 
+			code = ";"; 
 
 		if(c == '.')
-			code = ConstEvtKey.KEYCODE_PERIOD; 
+			code = "."; 
 
 		if(c == '*')
-			code = ConstEvtKey.KEYCODE_STAR; 
+			code = "*"; 
 
 		if(c == '+')
-			code = ConstEvtKey.KEYCODE_PLUS; 
+			code = "+"; 
 
 		if(c == '-')
-			code = ConstEvtKey.KEYCODE_MINUS; 
+			code = "-"; 
 
 		if(c == '=')
-			code = ConstEvtKey.KEYCODE_EQUALS; 
+			code = "="; 
 
 		if(e.getKeyCode() == KeyEvent.VK_HOME)
-			code = ConstEvtKey.KEYCODE_HOME; 
+			code = PhysicalButton.HOME.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_PAGE_UP)
-			code = ConstEvtKey.KEYCODE_MENU; 
-
-		if(e.getKeyCode() == KeyEvent.VK_PAGE_DOWN)
-			code = ConstEvtKey.KEYCODE_STAR; 
+			code = PhysicalButton.MENU.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_ESCAPE)
-			code = ConstEvtKey.KEYCODE_BACK; 
+			code = PhysicalButton.BACK.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_F3)
-			code = ConstEvtKey.KEYCODE_CALL; 
-
-		if(e.getKeyCode() == KeyEvent.VK_F4)
-			code = ConstEvtKey.KEYCODE_ENDCALL; 
+			code = PhysicalButton.SEARCH.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_F5)
-			code = ConstEvtKey.KEYCODE_SEARCH; 
-
-		if(e.getKeyCode() == KeyEvent.VK_F7)
-			code = ConstEvtKey.KEYCODE_POWER; 
+			code = PhysicalButton.SEARCH.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_RIGHT)
-			code = ConstEvtKey.KEYCODE_DPAD_RIGHT; 
+			code = PhysicalButton.DPAD_RIGHT.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_UP)
-			code = ConstEvtKey.KEYCODE_DPAD_UP; 
+			code = PhysicalButton.DPAD_UP.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_DOWN)
-			code = ConstEvtKey.KEYCODE_DPAD_DOWN; 
+			code = PhysicalButton.DPAD_DOWN.getKeyName(); 
 
 		if(e.getKeyCode() == KeyEvent.VK_SHIFT)
-			code = ConstEvtKey.KEYCODE_SHIFT_LEFT; 
+			code = PhysicalButton.DPAD_CENTER.getKeyName(); 
 
 		return code;
 	}

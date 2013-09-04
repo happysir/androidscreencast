@@ -8,6 +8,7 @@ import net.srcz.android.screencast.ui.JDialogDeviceList;
 import net.srcz.android.screencast.ui.JFrameMain;
 import net.srcz.android.screencast.ui.JSplashScreen;
 
+import com.android.chimpchat.ChimpChat;
 import com.android.ddmlib.AndroidDebugBridge;
 import com.android.ddmlib.IDevice;
 
@@ -32,7 +33,12 @@ public class Main extends SwingApplication {
 	private void initialize(JSplashScreen jw) throws IOException {
 		jw.setText("Getting devices list...");
 		jw.setVisible(true);
-		
+				
+		// we need to call this here to make sure AndroidDebugBridge.init() 
+		// is called only once (it is neccessary to call it before the getBridge()
+		// line and it is called in ChimpChat.getInstance()
+		ChimpChat chimpChat = ChimpChat.getInstance();
+				
 		AndroidDebugBridge bridge = AndroidDebugBridge.createBridge();
 		waitDeviceList(bridge);
 
@@ -66,7 +72,7 @@ public class Main extends SwingApplication {
 		jw.setText("Starting input injector...");
 		jw.setVisible(true);
 
-		injector = new Injector(device);
+		injector = new Injector(chimpChat, device);
 		injector.start();
 		jf.setInjector(injector);	
 	}

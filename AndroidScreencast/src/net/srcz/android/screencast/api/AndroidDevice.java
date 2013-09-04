@@ -11,8 +11,8 @@ import net.srcz.android.screencast.api.injector.NullSyncProgressMonitor;
 import net.srcz.android.screencast.api.injector.OutputStreamShellOutputReceiver;
 
 import com.android.ddmlib.IDevice;
+import com.android.ddmlib.SyncService;
 import com.android.ddmlib.SyncService.ISyncProgressMonitor;
-import com.android.ddmlib.SyncService.SyncResult;
 
 public class AndroidDevice {
 
@@ -42,11 +42,11 @@ public class AndroidDevice {
 			if (device.getSyncService() == null)
 				throw new RuntimeException("SyncService is null, ADB crashed ?");
 
-			SyncResult result = device.getSyncService().pushFile(localFrom.getAbsolutePath(),
+			device.getSyncService().pushFile(localFrom.getAbsolutePath(),
 					remoteTo, new NullSyncProgressMonitor());
-			if (result.getCode() != 0)
-				throw new RuntimeException("code = " + result.getCode()
-						+ " message= " + result.getMessage());
+			
+			//FIXME: here we should monitor that the sync was successful 
+			
 		} catch (Exception ex) {
 			throw new RuntimeException(ex);
 		}
@@ -62,8 +62,8 @@ public class AndroidDevice {
 					"doPullFile", String.class, String.class,
 					ISyncProgressMonitor.class);
 			m.setAccessible(true);
-			m.invoke(device.getSyncService(), removeFrom, localTo.getAbsolutePath(), device
-					.getSyncService().getNullProgressMonitor());
+			m.invoke(device.getSyncService(), removeFrom, localTo.getAbsolutePath(), SyncService.getNullProgressMonitor());
+			
 		} catch (Exception ex) {
 			throw new RuntimeException(ex);
 		}

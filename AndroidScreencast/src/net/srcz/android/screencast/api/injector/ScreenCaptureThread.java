@@ -9,8 +9,10 @@ import javax.swing.SwingUtilities;
 
 import net.srcz.android.screencast.api.recording.QuickTimeOutputStream;
 
+import com.android.ddmlib.AdbCommandRejectedException;
 import com.android.ddmlib.IDevice;
 import com.android.ddmlib.RawImage;
+import com.android.ddmlib.TimeoutException;
 
 public class ScreenCaptureThread extends Thread {
 
@@ -99,7 +101,15 @@ public class ScreenCaptureThread extends Thread {
 		// System.out.println("Getting initial screenshot through ADB");
 		RawImage rawImage = null;
 		synchronized (device) {
-			rawImage = device.getScreenshot();
+			try {
+				rawImage = device.getScreenshot();
+			} catch (TimeoutException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (AdbCommandRejectedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		if (rawImage != null) {
 			// System.out.println("screenshot through ADB ok");
