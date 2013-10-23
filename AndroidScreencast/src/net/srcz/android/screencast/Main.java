@@ -26,6 +26,7 @@ public class Main extends SwingApplication {
 			initialize(jw);
 		} finally {
 			jw.setVisible(false);
+			jw.dispose();			
 			jw = null;
 		}
 	}
