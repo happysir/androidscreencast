@@ -139,7 +139,7 @@ public class JFrameMain extends JFrame {
 
 		setIconImage(Toolkit.getDefaultToolkit().getImage(
 				getClass().getResource("icon.png")));
-		setDefaultCloseOperation(3);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLayout(new BorderLayout());
 		add(jtb, BorderLayout.NORTH);
 		add(jtbHardkeys, BorderLayout.SOUTH);
