@@ -105,4 +105,8 @@ public class Injector {
 			
 		}
 	}
+
+	public void waitForFirstScreenCapture() {
+		screencapture.waitForFirstFrame();
+	}
 }

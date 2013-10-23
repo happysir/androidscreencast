@@ -64,18 +64,22 @@ public class Main extends SwingApplication {
 		// Start showing the device screen
 		jf = new JFrameMain(device);
 		jf.setTitle(""+device);
-		
-		
-		// Show window
-		jf.setVisible(true);
-		
+						
 		// Starting injector
 		jw.setText("Starting input injector...");
 		jw.setVisible(true);
 
 		injector = new Injector(chimpChat, device);
 		injector.start();
-		jf.setInjector(injector);	
+		
+		jf.setInjector(injector);		
+		
+		injector.waitForFirstScreenCapture();
+
+		// Show window
+		jf.setVisible(true);
+				
+		
 	}
 
 	

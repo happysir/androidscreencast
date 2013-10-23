@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import javax.swing.SwingUtilities;
 
@@ -22,6 +23,8 @@ public class ScreenCaptureThread extends Thread {
 	private QuickTimeOutputStream qos = null;
 	private boolean landscape = false;
 	private ScreenCaptureListener listener = null;
+	
+	private CountDownLatch firstCapture = new CountDownLatch(1);
 
 	public ScreenCaptureListener getListener() {
 		return listener;
@@ -53,6 +56,9 @@ public class ScreenCaptureThread extends Thread {
 				boolean ok = fetchImage();
 				if(!ok)
 					break;
+				
+				firstCapture.countDown();
+				
 			} catch (java.nio.channels.ClosedByInterruptException ciex) {
 				break;
 			} catch (IOException e) {
@@ -128,6 +134,14 @@ public class ScreenCaptureThread extends Thread {
 
 	public void toogleOrientation() {
 		landscape = !landscape;
+	}
+	
+	public void waitForFirstFrame() {
+		try {
+			firstCapture.await();
+		} catch (InterruptedException e) {
+			return;
+		}
 	}
 
 	public void display(RawImage rawImage) {
