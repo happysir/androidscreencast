@@ -83,6 +83,8 @@ public class Injector {
 		} else if (action == ConstEvtMotion.ACTION_UP) {
 			chimpDevice.getManager().touchUp((int) x, (int) y);
 		}
+		
+		screencapture.addMouseEvent(action, x, y);
 	}
 
 	public void injectTrackball(float amount) throws IOException {

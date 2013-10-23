@@ -1,9 +1,16 @@
 package net.srcz.android.screencast.api.injector;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 
 import javax.swing.SwingUtilities;
@@ -25,7 +32,31 @@ public class ScreenCaptureThread extends Thread {
 	private ScreenCaptureListener listener = null;
 	
 	private CountDownLatch firstCapture = new CountDownLatch(1);
-
+	
+	private class MouseEvent {
+		float x;
+		float y;
+		
+		int type;
+		long time;
+		
+		public MouseEvent(float x, float y, int type, long time) {		
+			this.x = x;
+			this.y = y;
+			this.type = type;
+			this.time = time;
+		}		
+		
+	}
+	
+	private ArrayList<MouseEvent> lastEvents = new ArrayList<MouseEvent>();
+	
+	public void addMouseEvent(int type, float x, float y) {
+		synchronized (lastEvents) {
+			lastEvents.add(new MouseEvent(x, y, type, System.currentTimeMillis()));	
+		}		
+	}
+	
 	public ScreenCaptureListener getListener() {
 		return listener;
 	}
@@ -169,7 +200,67 @@ public class ScreenCaptureThread extends Thread {
 					image.setRGB(x, y, value);
 			}
 		}
+		
+		Graphics2D c = image.createGraphics();
 
+		c.setColor(Color.RED);
+		c.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		c.setStroke(new BasicStroke(20,BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		
+		Path2D path = null;
+		
+		synchronized (lastEvents) {
+					
+			Iterator<MouseEvent> it = lastEvents.iterator();
+			
+			while ( it.hasNext()) {
+				
+				MouseEvent m = it.next();
+			
+				long deltaTime = System.currentTimeMillis() - m.time;
+				
+				if ( deltaTime > 1000) {
+					it.remove();
+					continue;
+				}
+				
+				if ( m.type == ConstEvtMotion.ACTION_DOWN) {
+					
+					path = new Path2D.Float();				
+					path.moveTo(m.x, m.y);
+					
+				} else if ( m.type == ConstEvtMotion.ACTION_UP) {
+					
+					if ( path == null) {
+						path = new Path2D.Float();				
+						path.moveTo(m.x, m.y);
+					}
+					
+					path.lineTo(m.x, m.y);
+					c.draw(path);
+					path = null;
+					
+				} else if ( m.type == ConstEvtMotion.ACTION_MOVE) {
+					
+					if ( path == null) {
+						path = new Path2D.Float();				
+						path.moveTo(m.x, m.y);											
+					} else {
+						path.lineTo(m.x, m.y);
+					}
+					
+				}					
+			}
+
+		}
+		
+		if ( path != null) {
+			c.draw(path);
+		}
+		
+		c.dispose();
+		
+		
 		try {
 			if (qos != null)
 				qos.writeFrame(image, 10);
