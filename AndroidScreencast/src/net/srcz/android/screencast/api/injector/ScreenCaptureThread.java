@@ -1,5 +1,6 @@
 package net.srcz.android.screencast.api.injector;
 
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -11,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 import javax.swing.SwingUtilities;
@@ -25,13 +28,154 @@ import com.android.ddmlib.TimeoutException;
 public class ScreenCaptureThread extends Thread {
 
 	private BufferedImage image;
+	private long imageTime;
+	
 	private Dimension size;
 	private IDevice device;
 	private QuickTimeOutputStream qos = null;
+	private Object qosMonitor = new Object();
+	
+	
 	private boolean landscape = false;
 	private ScreenCaptureListener listener = null;
 	
 	private CountDownLatch firstCapture = new CountDownLatch(1);
+	
+	private BufferedImage previousImage;	
+	private long previousImageTime;
+		
+	private Timer timer = new Timer();
+	
+	private TimerTask task = new TimerTask() {
+		
+		@Override
+		public void run() {
+			
+			if ( image == null || previousImage == null) {
+				return;			
+			}
+				
+			final BufferedImage buf = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+			
+			Graphics2D c = buf.createGraphics();
+			
+			c.drawImage(previousImage, 0, 0, null);
+			
+			int deltaTime = (int) (System.currentTimeMillis() - imageTime);
+			
+			int intervalBetweenImages = (int) (imageTime - previousImageTime);
+			
+			float alpha = Math.min(1, (float) deltaTime / (float) intervalBetweenImages);
+						
+			AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
+			
+			c.setComposite(ac);
+			
+			c.drawImage(image, 0, 0, null);
+			
+			c.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
+						
+			c.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			c.setStroke(new BasicStroke(20,BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			
+			Path2D path = null;
+			
+			synchronized (lastEvents) {			
+				
+				Iterator<MouseEvent> it = lastEvents.iterator();
+				
+				while ( it.hasNext()) {
+					
+					MouseEvent m = it.next();
+								
+					if ( System.currentTimeMillis() - m.time > 1000 && m.type == ConstEvtMotion.ACTION_UP) {
+						
+						Iterator<MouseEvent> it2 = lastEvents.iterator();
+						
+						while ( it2.hasNext() ) {
+							
+							MouseEvent n = it2.next();
+													
+							it2.remove();
+							
+							if ( n == m) break;
+							
+						}					
+						
+						it = it2;
+						
+						path = null;
+						
+						continue;
+					}
+					
+					if ( m.type == ConstEvtMotion.ACTION_DOWN) {
+						
+						path = new Path2D.Float();				
+						path.moveTo(m.x, m.y);
+						path.lineTo(m.x, m.y); // to make sure that it is always displayed
+						
+					} else if ( m.type == ConstEvtMotion.ACTION_UP) {
+						
+						if ( path == null) {
+							path = new Path2D.Float();				
+							path.moveTo(m.x, m.y);
+						}
+						
+						path.lineTo(m.x, m.y);					
+					
+						alpha = Math.max(1f - (float) (System.currentTimeMillis() - m.time) / 1000f, 0);
+						
+						c.setColor(new Color(1, 0, 0, alpha));
+						
+						c.draw(path);
+						path = null;
+					
+						
+					} else if ( m.type == ConstEvtMotion.ACTION_MOVE) {
+						
+						if ( path == null) {
+							path = new Path2D.Float();				
+							path.moveTo(m.x, m.y);						
+						}
+						
+						path.lineTo(m.x, m.y);
+											
+					}					
+				}
+
+			}
+			
+			if ( path != null) {
+				c.setColor(Color.RED);
+				
+				c.draw(path);
+			}
+			
+			c.dispose();
+			
+			try {
+				
+				synchronized (qosMonitor) {					
+					if (qos != null)
+						qos.writeFrame(buf, 1);
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+
+			if (listener != null) {
+				SwingUtilities.invokeLater(new Runnable() {
+
+					public void run() {
+						listener.handleNewImage(size, buf, landscape);
+						// jp.handleNewImage(size, image, landscape);
+					}
+				});
+			}
+			
+		}
+	}; 
 	
 	private class MouseEvent {
 		float x;
@@ -80,6 +224,14 @@ public class ScreenCaptureThread extends Thread {
 	public Dimension getPreferredSize() {
 		return size;
 	}
+	
+	@Override
+	public synchronized void start() {	
+		super.start();
+		
+		timer.scheduleAtFixedRate(task, 0, 40);
+		
+	}
 
 	public void run() {
 		do {
@@ -99,28 +251,39 @@ public class ScreenCaptureThread extends Thread {
 			}
 
 		} while (true);
+		
+		timer.cancel();
 	}
 
 	public void startRecording(File f) {
-		try {
-			if(!f.getName().toLowerCase().endsWith(".mov"))
-				f = new File(f.getAbsolutePath()+".mov");
-			qos = new QuickTimeOutputStream(f,
-					QuickTimeOutputStream.VideoFormat.JPG);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		
+		synchronized (qosMonitor) {
+		
+			try {
+				if(!f.getName().toLowerCase().endsWith(".mov"))
+					f = new File(f.getAbsolutePath()+".mov");
+				qos = new QuickTimeOutputStream(f,
+						QuickTimeOutputStream.VideoFormat.JPG);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			qos.setVideoCompressionQuality(1f);
+			qos.setTimeScale(25);
+			
 		}
-		qos.setVideoCompressionQuality(1f);
-		qos.setTimeScale(30); // 30 fps
 	}
 
 	public void stopRecording() {
-		try {
-			QuickTimeOutputStream o = qos;
-			qos = null;
-			o.close();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		synchronized (qosMonitor) {
+						
+			try {
+				QuickTimeOutputStream o = qos;
+				qos = null;
+				o.close();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			
 		}
 	}
 
@@ -178,6 +341,12 @@ public class ScreenCaptureThread extends Thread {
 	public void display(RawImage rawImage) {
 		int width2 = landscape ? rawImage.height : rawImage.width;
 		int height2 = landscape ? rawImage.width : rawImage.height;
+		
+		previousImage = image;
+		previousImageTime = imageTime;
+		
+		imageTime = System.currentTimeMillis();
+		
 		if (image == null) {
 			image = new BufferedImage(width2, height2,
 					BufferedImage.TYPE_INT_RGB);
@@ -199,84 +368,8 @@ public class ScreenCaptureThread extends Thread {
 				else
 					image.setRGB(x, y, value);
 			}
-		}
+		}		
 		
-		Graphics2D c = image.createGraphics();
-
-		c.setColor(Color.RED);
-		c.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		c.setStroke(new BasicStroke(20,BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-		
-		Path2D path = null;
-		
-		synchronized (lastEvents) {
-					
-			Iterator<MouseEvent> it = lastEvents.iterator();
-			
-			while ( it.hasNext()) {
-				
-				MouseEvent m = it.next();
-			
-				long deltaTime = System.currentTimeMillis() - m.time;
-				
-				if ( deltaTime > 1000) {
-					it.remove();
-					continue;
-				}
-				
-				if ( m.type == ConstEvtMotion.ACTION_DOWN) {
-					
-					path = new Path2D.Float();				
-					path.moveTo(m.x, m.y);
-					
-				} else if ( m.type == ConstEvtMotion.ACTION_UP) {
-					
-					if ( path == null) {
-						path = new Path2D.Float();				
-						path.moveTo(m.x, m.y);
-					}
-					
-					path.lineTo(m.x, m.y);
-					c.draw(path);
-					path = null;
-					
-				} else if ( m.type == ConstEvtMotion.ACTION_MOVE) {
-					
-					if ( path == null) {
-						path = new Path2D.Float();				
-						path.moveTo(m.x, m.y);											
-					} else {
-						path.lineTo(m.x, m.y);
-					}
-					
-				}					
-			}
-
-		}
-		
-		if ( path != null) {
-			c.draw(path);
-		}
-		
-		c.dispose();
-		
-		
-		try {
-			if (qos != null)
-				qos.writeFrame(image, 10);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-		if (listener != null) {
-			SwingUtilities.invokeLater(new Runnable() {
-
-				public void run() {
-					listener.handleNewImage(size, image, landscape);
-					// jp.handleNewImage(size, image, landscape);
-				}
-			});
-		}
 	}
 
 }
